@@ -1,16 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, Info, Settings } from "lucide-react";
 import MainFeature from "../components/MainFeature";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { getHighScores } from "../services/scoreService";
+import { getSettings, saveSettings } from "../services/settingsService";
 
 const Home = () => {
   const [showInfo, setShowInfo] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [highScores, setHighScores] = useState([
-    { name: "Player1", score: 120 },
-    { name: "Player2", score: 95 },
-    { name: "Player3", score: 87 },
-  ]);
+  const [highScores, setHighScores] = useState([]);
+  const [isLoadingScores, setIsLoadingScores] = useState(true);
+  const { isAuthenticated, user } = useSelector(state => state.user);
+  const navigate = useNavigate();
   
   const [gameSettings, setGameSettings] = useState({
     difficulty: "medium",
@@ -18,23 +21,66 @@ const Home = () => {
     snakeColor: "primary",
   });
 
-  const handleScoreUpdate = (newScore) => {
-    // Only update high scores if the new score is higher than existing ones
-    if (newScore > 0) {
-      const playerName = prompt("New high score! Enter your name:", "Player");
-      if (playerName) {
-        const updatedScores = [...highScores, { name: playerName, score: newScore }]
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 5); // Keep only top 5
-        
-        setHighScores(updatedScores);
+  // Load high scores and user settings on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Load high scores from the database
+        setIsLoadingScores(true);
+        const scores = await getHighScores({ limit: 5 });
+        setHighScores(scores);
+        setIsLoadingScores(false);
+
+        // Load user settings if authenticated
+        if (isAuthenticated) {
+          const settings = await getSettings();
+          if (settings) {
+            setGameSettings(settings);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load data:", error);
+        setIsLoadingScores(false);
       }
+    };
+
+    loadData();
+  }, [isAuthenticated]);
+
+  const handleScoreUpdate = async (newScore) => {
+    // If the user isn't authenticated, prompt to login to save the score
+    if (!isAuthenticated && newScore > 50) {
+      const shouldLogin = window.confirm("Sign in to save your score and appear on the leaderboard!");
+      if (shouldLogin) {
+        navigate("/login");
+      }
+    }
+
+    // Refresh high scores after a new score is recorded
+    try {
+      const scores = await getHighScores({ limit: 5 });
+      setHighScores(scores);
+    } catch (error) {
+      console.error("Failed to refresh high scores:", error);
     }
   };
 
-  const updateSettings = (newSettings) => {
+  const updateSettings = async (newSettings) => {
     setGameSettings({ ...gameSettings, ...newSettings });
     setShowSettings(false);
+
+    // Save settings to database if authenticated
+    if (isAuthenticated) {
+      try {
+        await saveSettings({
+          difficulty: newSettings.difficulty || gameSettings.difficulty,
+          gridSize: newSettings.gridSize || gameSettings.gridSize,
+          snakeColor: newSettings.snakeColor || gameSettings.snakeColor
+        });
+      } catch (error) {
+        console.error("Failed to save settings:", error);
+      }
+    }
   };
 
   return (
@@ -107,17 +153,39 @@ const Home = () => {
               <Trophy size={20} className="mr-2 text-accent" />
               High Scores
             </h2>
-            <div className="space-y-2">
-              {highScores.map((score, index) => (
-                <div 
-                  key={index} 
-                  className="flex justify-between items-center p-2 rounded-lg bg-surface-200 dark:bg-surface-700"
-                >
-                  <span className="font-medium">{score.name}</span>
-                  <span className="text-accent font-bold">{score.score}</span>
+            {isLoadingScores ? (
+              <div className="py-4 text-center">
+                <div className="animate-pulse text-sm text-surface-500 dark:text-surface-400">
+                  Loading scores...
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : highScores.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-surface-500 dark:text-surface-400 text-sm">No scores yet. Be the first!</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {highScores.map((score, index) => (
+                  <div 
+                    key={index} 
+                    className="flex justify-between items-center p-2 rounded-lg bg-surface-200 dark:bg-surface-700"
+                  >
+                    <span className="font-medium">{score.player_name}</span>
+                    <span className="text-accent font-bold">{score.score}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button 
+              onClick={() => navigate('/leaderboard')}
+              className="mt-4 w-full text-sm text-primary hover:underline flex items-center justify-center"
+            >
+              View Full Leaderboard
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
+                <path d="M5 12h14"></path>
+                <path d="m12 5 7 7-7 7"></path>
+              </svg>
+            </button>
           </motion.div>
 
           {/* Game Info Button */}

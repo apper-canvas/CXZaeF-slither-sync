@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Pause, RotateCcw, Trophy } from "lucide-react";
+import { useSelector } from "react-redux";
+import { saveScore } from "../services/scoreService";
 
 const CELL_SIZE = 20;
 const GRID_SIZES = {
@@ -42,9 +44,11 @@ const MainFeature = ({ settings, onScoreUpdate }) => {
   });
   
   const [gridSize, setGridSize] = useState(GRID_SIZES[settings.gridSize]);
+  const [isScoreSaved, setIsScoreSaved] = useState(false);
   const gameLoopRef = useRef(null);
   const canvasRef = useRef(null);
   const touchStartRef = useRef(null);
+  const { isAuthenticated, user } = useSelector(state => state.user);
 
   // Update settings when they change
   useEffect(() => {
@@ -85,6 +89,7 @@ const MainFeature = ({ settings, onScoreUpdate }) => {
       score: 0,
       speed: SPEEDS[settings.difficulty]
     });
+    setIsScoreSaved(false);
   }, [generateFood, gridSize, settings.difficulty]);
 
   // Initialize game on mount and when grid size changes
@@ -240,12 +245,39 @@ const MainFeature = ({ settings, onScoreUpdate }) => {
     touchStartRef.current = null;
   };
 
-  // Handle game over
+  // Handle game over and save score to database
   useEffect(() => {
-    if (gameState.gameOver) {
-      onScoreUpdate(gameState.score);
+    if (gameState.gameOver && gameState.score > 0 && !isScoreSaved) {
+      // Save score to database if authenticated
+      const handleScoreSave = async () => {
+        try {
+          if (isAuthenticated) {
+            const playerName = user?.firstName ? `${user.firstName} ${user.lastName}` : user?.emailAddress?.split('@')[0] || 'Anonymous';
+            
+            const scoreData = {
+              playerName,
+              score: gameState.score,
+              difficulty: settings.difficulty,
+              gridSize: settings.gridSize,
+              snakeColor: settings.snakeColor
+            };
+            
+            await saveScore(scoreData);
+            setIsScoreSaved(true);
+          }
+          
+          // Call the onScoreUpdate prop to notify parent component
+          onScoreUpdate(gameState.score);
+        } catch (error) {
+          console.error("Failed to save score:", error);
+          // Still notify parent even if saving to database fails
+          onScoreUpdate(gameState.score);
+        }
+      };
+      
+      handleScoreSave();
     }
-  }, [gameState.gameOver, gameState.score, onScoreUpdate]);
+  }, [gameState.gameOver, gameState.score, isScoreSaved, isAuthenticated, user, settings, onScoreUpdate]);
 
   // Toggle game state
   const toggleGameState = () => {

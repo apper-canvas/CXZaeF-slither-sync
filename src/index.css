@@ -2,65 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  html {
-    -webkit-tap-highlight-color: transparent;
-  }
+:root {
+  --color-primary: 114, 137, 218;
+  --color-primary-dark: 78, 93, 148;
+  --color-secondary: 255, 113, 91;
+  --color-accent: 87, 204, 153;
   
-  body {
-    @apply antialiased;
-  }
-  
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
-  }
+  --color-surface-50: 249, 250, 251;
+  --color-surface-100: 243, 244, 246;
+  --color-surface-200: 229, 231, 235;
+  --color-surface-300: 209, 213, 219;
+  --color-surface-400: 156, 163, 175;
+  --color-surface-500: 107, 114, 128;
+  --color-surface-600: 75, 85, 99;
+  --color-surface-700: 55, 65, 81;
+  --color-surface-750: 42, 51, 66;
+  --color-surface-800: 31, 41, 55;
+  --color-surface-900: 17, 24, 39;
 }
 
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply px-4 py-2 rounded-lg font-medium transition-colors;
   }
   
   .btn-primary {
-    @apply bg-primary text-white hover:bg-primary-dark focus:ring-primary;
-  }
-  
-  .btn-secondary {
-    @apply bg-secondary text-white hover:bg-secondary-dark focus:ring-secondary;
+    @apply bg-primary text-white hover:bg-primary-dark;
   }
   
   .btn-outline {
-    @apply border border-surface-300 dark:border-surface-700 hover:bg-surface-200 dark:hover:bg-surface-800 focus:ring-surface-400;
+    @apply border border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700;
   }
   
-  .game-grid {
-    @apply grid bg-surface-200 dark:bg-surface-800 rounded-lg overflow-hidden;
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm;
   }
   
-  .snake-segment {
-    @apply bg-primary rounded-sm;
-  }
-  
-  .food {
-    @apply bg-accent rounded-full;
+  .shadow-card {
+    @apply shadow-md dark:shadow-lg dark:shadow-surface-900/50;
   }
 }
 
-@layer utilities {
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .text-shadow {
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  
-  .text-shadow-lg {
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
-  }
+body {
+  font-family: 'Inter', sans-serif;
 }
